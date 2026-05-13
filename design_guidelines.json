@@ -1,0 +1,67 @@
+{
+  "theme": "light",
+  "archetype": "1 (Organic & Earthy)",
+  "vibe": "Premium, energetic, calm-yet-bold. Tactile minimalism designed for wellness/pilates SaaS.",
+  "colors": {
+    "background": "0 0% 98%",
+    "foreground": "140 10% 10%",
+    "primary": "153 32% 17%",
+    "primary_foreground": "0 0% 100%",
+    "secondary": "110 14% 57%",
+    "secondary_foreground": "153 32% 17%",
+    "accent": "15 40% 58%",
+    "accent_foreground": "0 0% 100%",
+    "muted": "60 10% 94%",
+    "muted_foreground": "140 5% 40%",
+    "border": "60 5% 85%",
+    "card": "0 0% 100%",
+    "card_foreground": "140 10% 10%"
+  },
+  "typography": {
+    "fonts": {
+      "heading": "Cabinet Grotesk",
+      "body": "Manrope"
+    },
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tight",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight",
+      "h3": "text-xl sm:text-2xl",
+      "body": "text-base leading-relaxed",
+      "small_labels": "text-xs tracking-[0.2em] uppercase"
+    }
+  },
+  "layout": {
+    "marketing": {
+      "grid": "Bento Grid Protocol: Asymmetric layouts, grid-cols-1 md:grid-cols-12, wide gaps (gap-8 to gap-12).",
+      "spacing": "Generous. Use p-12 to p-32 for sections.",
+      "hero_overlay": "Max overlay opacity bg-black/30 or gradient to transparent to let the high-quality image breathe."
+    },
+    "dashboard": {
+      "grid": "Control Room Grid: High density, gap-4 or gap-6. Direct children only.",
+      "spacing": "p-6 or p-8 inside cards.",
+      "surfaces": "Tactile Solid: Soft backgrounds with crisp 1px borders (border-border/40), no heavy drop shadows. Card radius max 8px (rounded-lg)."
+    }
+  },
+  "components": {
+    "buttons": "Shadcn 'Button' customized to rounded-full for marketing, rounded-lg for dashboard. Hover states must explicitly lighten background.",
+    "glassmorphism": "Only used for sticky nav or modals over imagery: backdrop-blur-xl bg-white/70, 1px inner border.",
+    "testing": "All interactive elements, forms, and cards MUST have role-based data-testid attributes (e.g., data-testid='create-class-button')."
+  },
+  "media": {
+    "hero_marketing": "https://images.unsplash.com/photo-1717500252709-05a73fc4f1da?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njl8MHwxfHNlYXJjaHwxfHxwaWxhdGVzJTIwc3R1ZGlvfGVufDB8fHx8MTc3ODY2NjI3MXww&ixlib=rb-4.1.0&q=85",
+    "feature_showcase_1": "https://images.unsplash.com/photo-1754257319723-6a775bedb0fc?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNzl8MHwxfHNlYXJjaHw0fHxwaWxhdGVzJTIwaW5zdHJ1Y3RvcnxlbnwwfHx8fDE3Nzg2NjYyNzF8MA&ixlib=rb-4.1.0&q=85",
+    "feature_showcase_2": "https://images.unsplash.com/photo-1770012905139-713758ded6ec?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNzl8MHwxfHNlYXJjaHwxfHxwaWxhdGVzJTIwaW5zdHJ1Y3RvcnxlbnwwfHx8fDE3Nzg2NjYyNzF8MA&ixlib=rb-4.1.0&q=85",
+    "equipment_detail": "https://images.unsplash.com/photo-1667400104789-f50a4cb393cf?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njl8MHwxfHNlYXJjaHwyfHxwaWxhdGVzJTIwc3R1ZGlvfGVufDB8fHx8MTc3ODY2NjI3MXww&ixlib=rb-4.1.0&q=85",
+    "logos": [
+      "https://images.unsplash.com/photo-1769984867572-10dea95bd4f1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NjZ8MHwxfHNlYXJjaHwxfHxjb21wYW55JTIwbG9nbyUyMG1pbmltYWxpc3R8ZW58MHx8fHwxNzc4NjY2MjcxfDA&ixlib=rb-4.1.0&q=85"
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Install @phosphor-icons/react or lucide-react for high-end lightweight icons.",
+    "Update tailwind.config.js and index.css with the provided HSL color variables.",
+    "Use pure HTML + Tailwind for the Marketing landing page (bento grid, overlapping layout).",
+    "Use deeply customized Shadcn components for the Dashboard and AI Wizard.",
+    "Ensure 'data-testid' is strictly added for every button, form field, and interactive feature.",
+    "Do not use generic blue/gray SaaS defaults. Adhere strictly to the Deep Forest Green/Sage/Sand palette to evoke calm-yet-bold wellness."
+  ]
+}
