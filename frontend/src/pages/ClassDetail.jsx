@@ -22,24 +22,28 @@ export default function ClassDetail() {
   const [instruction, setInstruction] = useState("");
   const [regenLoading, setRegenLoading] = useState(false);
 
-  const load = async () => {
-    try {
-      const { data } = await api.get(`/classes/${id}`);
-      setCls(data);
-    } catch {
-      // silent
-    }
-  };
-
   useEffect(() => {
-    load();
+    let alive = true;
+    let timer = null;
+    const tick = async () => {
+      try {
+        const { data } = await api.get(`/classes/${id}`);
+        if (!alive) return;
+        setCls(data);
+        if (!FINAL_STATES.includes(data.status)) {
+          timer = setTimeout(tick, 2500);
+        }
+      } catch {
+        // network blip — try again later if still mounted
+        if (alive) timer = setTimeout(tick, 4000);
+      }
+    };
+    tick();
+    return () => {
+      alive = false;
+      if (timer) clearTimeout(timer);
+    };
   }, [id]);
-
-  useEffect(() => {
-    if (!cls || FINAL_STATES.includes(cls.status)) return;
-    const t = setInterval(load, 2500);
-    return () => clearInterval(t);
-  }, [cls?.status]);
 
   if (!cls) return <div className="text-muted-foreground">Loading…</div>;
 
