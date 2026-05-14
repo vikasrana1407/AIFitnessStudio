@@ -31,12 +31,22 @@ def exercise_list(request):
         return Response(ExerciseSerializer(qs, many=True).data)
 
     # POST
+    # Permission: SUPER_ADMIN may create system OR studio-scoped exercises
+    # (controlled by `?scope=system` query param). Owners may only create
+    # studio-scoped exercises. Trainers/anonymous: forbidden.
+    if user.role not in ("OWNER", "SUPER_ADMIN"):
+        return Response({"detail": "Permission denied"}, status=403)
     serializer = ExerciseSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    obj = serializer.save(
-        studio=user.studio,
-        is_approved=(user.role == "OWNER" or user.role == "SUPER_ADMIN"),
-    )
+    target_scope = request.GET.get("scope") or request.data.get("scope")
+    if user.role == "SUPER_ADMIN" and target_scope == "system":
+        studio = None
+    elif user.role == "SUPER_ADMIN" and not user.studio_id:
+        # super admins without a studio default to creating system exercises
+        studio = None
+    else:
+        studio = user.studio
+    obj = serializer.save(studio=studio, is_approved=True)
     return Response(ExerciseSerializer(obj).data, status=201)
 
 

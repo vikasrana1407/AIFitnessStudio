@@ -19,7 +19,7 @@ export default function AdminStudioDetail() {
 
   useEffect(() => {
     if (user?.role !== "SUPER_ADMIN") return;
-    api.get(`/admin/studios/${id}`).then((r) => setData(r.data));
+    api.get(`/admin/studios/${id}`).then((r) => setData(r.data)).catch(() => {});
   }, [id, user]);
 
   if (user?.role !== "SUPER_ADMIN") {

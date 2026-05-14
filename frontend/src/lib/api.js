@@ -11,6 +11,8 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Quiet 400/404 in dev so the webpack-overlay doesn't blanket the screen.
+// We never auto-toast errors here — call sites decide UX in their .catch().
 api.interceptors.response.use(
   (r) => r,
   (err) => {

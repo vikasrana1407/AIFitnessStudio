@@ -17,7 +17,7 @@ from .pipeline import kickoff_pipeline, regenerate_segment
 def class_list(request):
     user = request.user
     if not user.studio_id:
-        return Response({"detail": "No studio assigned"}, status=400)
+        return Response([])  # super admin has no studio → empty list
 
     if request.method == "GET":
         qs = FitnessClass.objects.filter(studio=user.studio)

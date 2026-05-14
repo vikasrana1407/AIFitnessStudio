@@ -12,6 +12,11 @@ class User(AbstractUser):
         (ROLE_TRAINER, "Trainer"),
         (ROLE_SUPER_ADMIN, "Super Admin"),
     ]
+    THEME_CHOICES = [
+        ("light", "Light"),
+        ("dark", "Dark"),
+        ("system", "System"),
+    ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
@@ -22,6 +27,9 @@ class User(AbstractUser):
         null=True, blank=True,
         related_name="members",
     )
+    # New in iteration 3:
+    profile_picture_url = models.URLField(blank=True, default="")
+    theme_preference = models.CharField(max_length=10, choices=THEME_CHOICES, default="light")
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]

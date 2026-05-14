@@ -1,8 +1,7 @@
 /**
- * Profile settings — works for both Studio Owner and Super Admin.
- * Edit name + email; change password; logout.
+ * Profile settings — edit name/email/profile-picture + change password + theme.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -10,16 +9,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
-import { Save, LogOut, KeyRound } from "lucide-react";
+import { Save, LogOut, KeyRound, Upload, X } from "lucide-react";
+import { applyMode } from "@/lib/theme";
+
+const THEMES = [["light", "Light"], ["dark", "Dark"], ["system", "Match system"]];
 
 export default function ProfileSettings() {
-  const { user, refreshUser, logout } = useAuth();
+  const { user, setUser, refreshUser, logout } = useAuth();
   const nav = useNavigate();
   const [form, setForm] = useState({ first_name: "", last_name: "", email: "" });
   const [pw, setPw] = useState({ current_password: "", new_password: "", confirm: "" });
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPw, setSavingPw] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
 
   useEffect(() => {
     if (user) setForm({
@@ -29,12 +36,15 @@ export default function ProfileSettings() {
     });
   }, [user]);
 
+  if (!user) return null;
+  const initial = (user.first_name || user.email || "?").slice(0, 1).toUpperCase();
+
   const saveProfile = async (e) => {
     e.preventDefault();
     setSavingProfile(true);
     try {
-      await api.patch("/auth/profile", form);
-      await refreshUser();
+      const { data } = await api.patch("/auth/profile", form);
+      setUser(data);
       toast.success("Profile updated");
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Update failed");
@@ -62,7 +72,41 @@ export default function ProfileSettings() {
     setSavingPw(false);
   };
 
-  if (!user) return null;
+  const uploadPic = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const { data } = await api.post("/uploads/profile-picture", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      // Optimistic; backend also persists
+      await refreshUser();
+      toast.success("Profile picture updated");
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Upload failed");
+    }
+    setUploading(false);
+  };
+
+  const removePic = async () => {
+    try {
+      const { data } = await api.patch("/auth/profile", { profile_picture_url: "" });
+      setUser(data);
+      toast.success("Profile picture removed");
+    } catch { toast.error("Failed to remove"); }
+  };
+
+  const setTheme = async (mode) => {
+    applyMode(mode);
+    try {
+      const { data } = await api.patch("/auth/profile", { theme_preference: mode });
+      setUser(data);
+      toast.success(`Theme: ${mode}`);
+    } catch { /* keep local change */ }
+  };
 
   return (
     <div className="space-y-10 max-w-2xl">
@@ -71,22 +115,37 @@ export default function ProfileSettings() {
           <div className="label-eyebrow mb-2">Account</div>
           <h1 className="text-3xl font-heading font-bold tracking-tight">My profile</h1>
           <p className="mt-2 text-muted-foreground text-sm">
-            Update your personal details and password.
+            Update your personal details, photo, theme and password.
           </p>
         </div>
         <Badge variant="secondary" className="rounded-full">{user.role}</Badge>
       </header>
 
       <div className="tactile-card flex items-center gap-4">
-        <div className="size-14 rounded-full bg-accent/20 text-accent grid place-items-center text-xl font-bold uppercase">
-          {(user.first_name || user.email || "?").slice(0, 1)}
-        </div>
-        <div className="min-w-0">
+        {user.profile_picture_url ? (
+          <img src={user.profile_picture_url} alt="Profile" className="size-16 rounded-full object-cover border border-border" />
+        ) : (
+          <div className="size-16 rounded-full bg-accent/20 text-accent grid place-items-center text-2xl font-bold uppercase">
+            {initial}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
           <div className="font-heading font-semibold truncate">
             {[user.first_name, user.last_name].filter(Boolean).join(" ") || user.email}
           </div>
           <div className="text-xs text-muted-foreground truncate">
             {user.studio?.name ? `${user.studio.name} · ${user.email}` : user.email}
+          </div>
+          <div className="mt-3 flex items-center gap-2">
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={uploadPic} data-testid="profile-pic-file-input" />
+            <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={uploading} className="rounded-full" data-testid="profile-pic-upload-button">
+              <Upload className="size-3 mr-1" /> {uploading ? "Uploading…" : "Change photo"}
+            </Button>
+            {user.profile_picture_url && (
+              <Button type="button" variant="ghost" size="sm" onClick={removePic} className="text-destructive hover:text-destructive">
+                <X className="size-3 mr-1" /> Remove
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -106,6 +165,15 @@ export default function ProfileSettings() {
         <div className="space-y-2">
           <Label>Email</Label>
           <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} data-testid="profile-email-input" />
+        </div>
+        <div className="space-y-2">
+          <Label>Theme</Label>
+          <Select value={user.theme_preference || "light"} onValueChange={setTheme}>
+            <SelectTrigger className="max-w-xs" data-testid="profile-theme-trigger"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {THEMES.map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
         <Button type="submit" disabled={savingProfile} className="rounded-full" data-testid="profile-save-button">
           <Save className="size-4 mr-1" />

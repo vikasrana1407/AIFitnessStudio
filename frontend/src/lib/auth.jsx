@@ -1,10 +1,9 @@
 /**
- * Auth context — JWT access/refresh stored in localStorage.
- * Also applies the active studio's brand color to CSS variables on login.
+ * Auth context — JWT in localStorage, applies brand color + theme mode on every load.
  */
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import api from "./api";
-import { applyBrandColor, resetBrandColor } from "./theme";
+import { applyBrandColor, resetBrandColor, applyMode, loadStoredMode } from "./theme";
 
 const AuthContext = createContext(null);
 
@@ -15,14 +14,16 @@ export function AuthProvider({ children }) {
   const applyTheme = useCallback((u) => {
     if (u?.studio?.brand_color) applyBrandColor(u.studio.brand_color);
     else resetBrandColor();
+    const mode = u?.theme_preference || loadStoredMode();
+    applyMode(mode);
   }, []);
+
+  // Apply stored mode on initial mount (before user loads)
+  useEffect(() => { applyMode(loadStoredMode()); }, []);
 
   const fetchMe = useCallback(async () => {
     const token = localStorage.getItem("fs_access");
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+    if (!token) { setLoading(false); return; }
     try {
       const { data } = await api.get("/auth/me");
       setUser(data);
@@ -62,7 +63,9 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser: fetchMe, applyTheme }}>
+    <AuthContext.Provider value={{
+      user, setUser, loading, login, register, logout, refreshUser: fetchMe, applyTheme,
+    }}>
       {children}
     </AuthContext.Provider>
   );

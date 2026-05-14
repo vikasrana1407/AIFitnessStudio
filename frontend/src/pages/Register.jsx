@@ -10,12 +10,7 @@ import { ArrowRight } from "lucide-react";
 export default function Register() {
   const { register } = useAuth();
   const nav = useNavigate();
-  const [form, setForm] = useState({
-    full_name: "",
-    studio_name: "",
-    email: "",
-    password: "",
-  });
+  const [form, setForm] = useState({ full_name: "", studio_name: "", email: "", password: "" });
   const [submitting, setSubmitting] = useState(false);
   const change = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
@@ -35,12 +30,12 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2">
+    <div className="h-screen overflow-hidden grid lg:grid-cols-2 bg-background">
       <div className="hidden lg:block relative overflow-hidden bg-primary">
         <img
           src="https://images.unsplash.com/photo-1754257319723-6a775bedb0fc?crop=entropy&cs=srgb&fm=jpg&q=85&w=1200"
           alt="Studio"
-          className="w-full h-full object-cover opacity-60"
+          className="absolute inset-0 w-full h-full object-cover opacity-60"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/30 to-transparent" />
         <div className="absolute bottom-10 left-10 right-10 text-primary-foreground">
@@ -51,13 +46,15 @@ export default function Register() {
         </div>
       </div>
 
-      <div className="flex flex-col justify-center px-6 sm:px-12 lg:px-20 py-12">
-        <Link to="/" className="font-heading font-bold tracking-tight mb-12" data-testid="register-brand-link">FitStudio AI</Link>
+      <div className="h-screen flex flex-col justify-center px-6 sm:px-12 lg:px-20">
+        <Link to="/" className="font-heading font-bold tracking-tight absolute top-6 left-6 lg:left-auto lg:right-10" data-testid="register-brand-link">
+          FitStudio AI
+        </Link>
         <div className="max-w-md w-full">
           <div className="label-eyebrow mb-3">Free trial</div>
           <h1 className="text-3xl sm:text-4xl font-heading font-bold tracking-tight">Create your studio</h1>
 
-          <form onSubmit={submit} className="mt-8 space-y-5" data-testid="register-form">
+          <form onSubmit={submit} className="mt-6 space-y-4" data-testid="register-form">
             <div className="space-y-2">
               <Label htmlFor="studio">Studio name</Label>
               <Input id="studio" required value={form.studio_name} onChange={change("studio_name")} placeholder="e.g. Lumen Pilates" data-testid="register-studio-input" />
@@ -79,7 +76,7 @@ export default function Register() {
             </Button>
           </form>
 
-          <div className="mt-6 text-sm text-muted-foreground">
+          <div className="mt-4 text-sm text-muted-foreground">
             Already have a studio? <Link to="/login" className="text-primary font-medium hover:underline" data-testid="register-login-link">Sign in →</Link>
           </div>
         </div>

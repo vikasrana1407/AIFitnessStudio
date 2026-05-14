@@ -13,7 +13,9 @@ def current_studio(request):
     """Get or update the studio of the authenticated user."""
     user = request.user
     if not user.studio_id:
-        return Response({"detail": "User has no studio"}, status=400)
+        # Super admins / users without a studio: return null shell instead of 400
+        # so the frontend can gracefully render an empty state.
+        return Response(None)
     studio = user.studio
     if request.method == "GET":
         return Response(StudioSerializer(studio).data)

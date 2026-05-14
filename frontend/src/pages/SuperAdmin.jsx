@@ -32,9 +32,9 @@ export default function SuperAdmin() {
   useEffect(() => {
     if (user?.role !== "SUPER_ADMIN") return;
     Promise.all([
-      api.get("/admin/metrics"),
-      api.get("/admin/studios"),
-      api.get("/admin/users"),
+      api.get("/admin/metrics").catch(() => ({ data: null })),
+      api.get("/admin/studios").catch(() => ({ data: [] })),
+      api.get("/admin/users").catch(() => ({ data: [] })),
     ]).then(([m, s, u]) => {
       setMetrics(m.data);
       setStudios(s.data || []);
@@ -56,8 +56,8 @@ export default function SuperAdmin() {
   return (
     <div className="space-y-10">
       <header>
-        <div className="label-eyebrow mb-2">Platform</div>
-        <h1 className="text-3xl font-heading font-bold tracking-tight">Super Admin</h1>
+        <div className="label-eyebrow mb-2">Super Admin</div>
+        <h1 className="text-3xl font-heading font-bold tracking-tight">Dashboard <span className="text-muted-foreground font-normal text-2xl">(Super Admin)</span></h1>
         <p className="mt-2 text-muted-foreground text-sm">Manage all studios, users and platform health.</p>
       </header>
 

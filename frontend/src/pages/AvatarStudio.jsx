@@ -41,10 +41,11 @@ export default function AvatarStudio() {
 
   useEffect(() => {
     api.get("/studios/current").then((r) => {
+      if (!r.data) return;
       setStudio(r.data);
       setTemplate(r.data.avatar_preference || "instructor_neutral");
       setVoice(r.data.voice_preference || "warm_female");
-    });
+    }).catch(() => {});
   }, []);
 
   const runSample = async () => {

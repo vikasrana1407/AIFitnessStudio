@@ -61,7 +61,7 @@ def me(request):
     if request.method == "GET":
         return Response(UserSerializer(user).data)
     # PATCH — only allow editing safe fields
-    allowed = {"first_name", "last_name", "email"}
+    allowed = {"first_name", "last_name", "email", "profile_picture_url", "theme_preference"}
     payload = {k: v for k, v in request.data.items() if k in allowed}
     if "email" in payload:
         new_email = payload["email"].lower().strip()
@@ -73,6 +73,10 @@ def me(request):
         user.first_name = payload["first_name"]
     if "last_name" in payload:
         user.last_name = payload["last_name"]
+    if "profile_picture_url" in payload:
+        user.profile_picture_url = payload["profile_picture_url"]
+    if "theme_preference" in payload and payload["theme_preference"] in ("light", "dark", "system"):
+        user.theme_preference = payload["theme_preference"]
     user.save()
     return Response(UserSerializer(user).data)
 
