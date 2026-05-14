@@ -1,74 +1,73 @@
 # FitStudio AI — PRD
 
 ## Original problem statement
-Build a scalable AI-powered SaaS platform for boutique fitness studios that
-auto-generates complete guided fitness class videos from a text brief. Multi-tenant,
-pilot = pilates studio. Modules required (per the brief):
-1. SaaS architecture & multi-tenant platform
-2. AI class generation (LLM)
-3. Exercise library system
-4. Voice generation (ElevenLabs)
-5. Avatar video generation (HeyGen/Synthesia/Tavus/D-ID)
-6. Exercise demonstration workflow
-7. Video render pipeline (FFmpeg/Remotion/MoviePy/Shotstack/Creatomate)
-8. Dashboard & workflow management
+Build a scalable AI-powered SaaS for boutique fitness studios that auto-generates guided
+class videos from a text brief. Pilot = pilates studio.
 
-User choices: Django + DRF + SQLite (scalable to any SQL backend), Django auth (JWT),
-Emergent Universal LLM Key (no extra cost POC).
-
-## Architecture
-- Backend: Django 5 + DRF, served via Django ASGI by `uvicorn server:app` on :8001
-- DB: SQLite by default; `DB_ENGINE` env var swaps to Postgres/MySQL without code change
-- Auth: JWT via `djangorestframework-simplejwt` (access 7d / refresh 30d)
-- AI: `emergentintegrations` library with Claude Sonnet 4.5 via Emergent Universal Key
-- Frontend: React 19 + Tailwind + Shadcn, organic earthy palette (Deep Forest Green, Sage, Sand, Clay)
+## Tech stack
+- Backend: Django 5 + DRF, SQLite (Postgres-ready via `DB_ENGINE`)
+- Auth: JWT (`djangorestframework-simplejwt`)
+- AI: Claude Sonnet 4.5 via `emergentintegrations` (Emergent Universal Key)
+- Frontend: React 19 + Tailwind + Shadcn/UI
+- Theme: Deep Forest Green / Sage / Sand / Clay; brand color updates whole app live
 
 ## Personas
-- **Super Admin** — platform owner managing studios, users, master exercise library
-- **Studio Owner** — boutique studio operator generating + approving classes
-- **Trainer** — (Phase 2) studio member generating drafts for owner approval
+- Super Admin — platform owner
+- Studio Owner — boutique studio operator
+- Trainer (Phase 2) — studio member, drafts → owner approves
 
 ## Implemented (Feb 2026)
-- Multi-tenant auth: register creates `Studio` + `Owner` atomically; login + me; super-admin role
-- Studio branding settings (name, tagline, color, logo URL, voice & avatar preferences)
-- Exercise library (system + studio-scoped) with category/difficulty/muscle filters, search, add-exercise dialog
-- 25 seeded system exercises spanning pilates/strength/flexibility/balance
-- AI class generation (REAL via Emergent LLM Claude Sonnet 4.5):
-  - Class structure with intro + segments (minute markers, scripts, breath, safety, motivational lines) + outro
-  - Strictly uses approved exercise library
-  - Falls back to deterministic template if LLM call fails
-- Generation pipeline tracker — script → voice → avatar → render with per-step job rows
-- Class detail page: live polling, segment cards, regenerate-segment dialog with custom instruction,
-  full-regenerate, approve, MP4 download button (mocked URL)
-- Super-admin panel: KPIs + studios + users tables
-- Landing page (hero, features bento, workflow, pricing CTA)
 
-## MOCKED in Phase 1 (per user choice — zero-cost POC)
-- Voice generation → returns `mock.fitstudio.ai/voice/<id>.mp3`
-- Avatar rendering → returns `mock.fitstudio.ai/avatar/<id>.mp4`
-- Final MP4 stitch → returns `mock.fitstudio.ai/videos/<id>.mp4`
+### Iteration 1
+- Multi-tenant auth (register creates Studio + Owner atomically)
+- Studio branding settings, exercise library (25 system + studio scoped CRUD)
+- AI class generation (real Emergent LLM script + MOCKED voice/avatar/render)
+- Generation pipeline tracker, class detail with segment regenerate
+- Super admin dashboard with KPIs + tables
+
+### Iteration 2 (this build) — 7 user-requested fixes/features
+1. **Super Admin UX fixed** — auto-redirects to `/app/admin`; clickable studio rows open `/app/admin/studios/:id` with full dossier (members + classes + studio exercises); new endpoint `GET /api/admin/studios/<uuid>`
+2. **Live brand theming** — Branding page updates `--primary` CSS variable in real time via hex→HSL conversion; persists across reloads (auth context applies on login/refresh). Color picker + 6 presets included.
+3. **Avatar Studio** — `/app/avatar` route with 3 template cards, voice select, sample render (MOCKED ~2s), Save as studio default.
+4. **Exercise library upgraded** — cards now clickable → side Sheet with full instructions, safety notes, target muscles; "Why a library?" explainer block added at top.
+5. **Classes view/edit/delete + tabs** — `ClassesList` has All / In Progress / Ready tabs (URL-synced) with counts; each card has Open + Delete; `ClassDetail` has Edit dialog (title + music) and Delete with AlertDialog.
+6. **Clickable dashboard cards** — 4 KPI cards now Link components going to dedicated filtered pages.
+7. **Profile settings** — `/app/profile` for both Owner and Super Admin. Patch name/email + change password (POST `/api/auth/password`).
+
+### Portability
+- `/app/README.md` — full local-setup instructions (no Emergent dependencies)
+- `/app/backend/README.md` — backend deep dive, endpoint list, DB switch guide, prod deploy notes
+- `/app/backend/.env.example` — sample env file with all knobs documented
+- All env-driven config (no hardcoded URLs/keys)
+- Inline code comments on key modules (`pipeline.py`, `llm_service.py`, `theme.js`, `auth.jsx`)
 
 ## Test Credentials
-See `/app/memory/test_credentials.md`
+See `/app/memory/test_credentials.md` — unchanged.
 
-## P0 / P1 backlog (Phase 2)
-P0
-- Integrate ElevenLabs for per-segment voice generation
-- Integrate HeyGen (or Tavus/Synthesia/D-ID) for avatar talking clips per segment
-- FFmpeg / MoviePy rendering pipeline with intro/outro, branded overlays, exercise demo clips, timers, music + ducking
-- Persistent background worker (Celery/RQ) replacing daemon threads
-P1
-- Studio object storage (Emergent object storage) for uploaded logos and rendered MP4s
-- Trainer role + approval workflow (trainer drafts → owner approves)
-- Exercise alternative mapping UI for accessibility
-- Class templates (recurring weekly classes, duplicate)
-- Usage metering + per-studio quotas + billing
-P2
-- Studio public class catalog (member-facing portal)
+## Tests
+- Iteration 1: 24/24 pytest passed
+- Iteration 2: 13/13 new pytest + all 7 critical UI flows passed
+- See `/app/test_reports/iteration_1.json`, `/app/test_reports/iteration_2.json`
+
+## What's still MOCKED
+- ElevenLabs voice generation (in `classes/pipeline.py`)
+- HeyGen/Synthesia/Tavus/D-ID avatar render (`classes/pipeline.py` + `AvatarStudio.jsx`)
+- FFmpeg/Remotion final MP4 stitching (`classes/pipeline.py`)
+
+## P0 backlog (Phase 2)
+- ElevenLabs integration (drop in API key → unmock voice step)
+- Avatar provider integration (HeyGen recommended)
+- FFmpeg/Remotion final-render pipeline (intro/outro, branded overlays, exercise demo splicing, music + ducking)
+- Celery worker replacing daemon threads (job durability across restarts)
+
+## P1 backlog
+- Trainer role with draft→approve workflow
+- Class templates (recurring/duplicate)
+- Per-studio quotas + Stripe billing
+- Exercise alternative mapping UI (accessibility variations)
+- Object storage for uploaded logos & rendered MP4s
+
+## P2 backlog
+- Studio public class catalog (member-facing)
 - Mobile companion app
 - Live class scheduling
-
-## Next Action Items
-1. User to provide ElevenLabs + HeyGen API keys to upgrade voice & avatar from MOCKED → real
-2. Decide on render pipeline tool (FFmpeg is leanest, Shotstack/Creatomate are hosted)
-3. Enable Celery worker once long-running jobs hit ~30+ seconds per class
