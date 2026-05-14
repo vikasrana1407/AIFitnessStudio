@@ -12,7 +12,10 @@ import ClassCreate from "@/pages/ClassCreate";
 import ClassDetail from "@/pages/ClassDetail";
 import ExercisesLibrary from "@/pages/ExercisesLibrary";
 import BrandingSettings from "@/pages/BrandingSettings";
+import AvatarStudio from "@/pages/AvatarStudio";
+import ProfileSettings from "@/pages/ProfileSettings";
 import SuperAdmin from "@/pages/SuperAdmin";
+import AdminStudioDetail from "@/pages/AdminStudioDetail";
 
 import "@/App.css";
 
@@ -38,7 +41,10 @@ export default function App() {
             <Route path="classes/:id" element={<ClassDetail />} />
             <Route path="exercises" element={<ExercisesLibrary />} />
             <Route path="branding" element={<BrandingSettings />} />
+            <Route path="avatar" element={<AvatarStudio />} />
+            <Route path="profile" element={<ProfileSettings />} />
             <Route path="admin" element={<SuperAdmin />} />
+            <Route path="admin/studios/:id" element={<AdminStudioDetail />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

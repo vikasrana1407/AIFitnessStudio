@@ -1,6 +1,9 @@
+/**
+ * Exercise library — clickable cards open a detail Sheet with full instructions,
+ * safety notes, and an "About the library" explainer.
+ */
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
-import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,10 +13,13 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+} from "@/components/ui/sheet";
+import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Search, Library } from "lucide-react";
+import { Plus, Search, Library, Info, ShieldAlert, ListChecks } from "lucide-react";
 
 const CATEGORIES = [
   "MAT_PILATES", "REFORMER", "CORE", "FLEXIBILITY", "BALANCE",
@@ -22,12 +28,12 @@ const CATEGORIES = [
 const DIFFICULTY = ["BEGINNER", "INTERMEDIATE", "ADVANCED"];
 
 export default function ExercisesLibrary() {
-  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("ALL");
   const [diff, setDiff] = useState("ALL");
   const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState(null);
 
   const load = async () => {
     const params = {};
@@ -45,7 +51,7 @@ export default function ExercisesLibrary() {
         <div>
           <div className="label-eyebrow mb-2">Movement</div>
           <h1 className="text-3xl font-heading font-bold tracking-tight">Exercise library</h1>
-          <p className="mt-2 text-muted-foreground max-w-xl text-sm">
+          <p className="mt-2 text-muted-foreground max-w-2xl text-sm">
             Approved exercises power your AI class generator. Add studio-specific moves anytime.
           </p>
         </div>
@@ -53,6 +59,20 @@ export default function ExercisesLibrary() {
           <Plus className="size-4 mr-1" /> Add exercise
         </Button>
       </header>
+
+      <div className="tactile-card bg-muted/40">
+        <div className="flex items-start gap-4">
+          <div className="size-10 shrink-0 rounded-md bg-primary/10 text-primary grid place-items-center">
+            <Info className="size-5" />
+          </div>
+          <div className="text-sm leading-relaxed text-muted-foreground">
+            <span className="text-foreground font-semibold">Why a library?</span> The AI class generator
+            chooses movements <em>only</em> from approved exercises — never inventing unsafe ones. Each
+            entry carries instructions, safety notes, and difficulty so the resulting script always
+            matches your studio's standard. Click any card to see the full details.
+          </div>
+        </div>
+      </div>
 
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[220px]">
@@ -82,7 +102,13 @@ export default function ExercisesLibrary() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {items.map((ex) => (
-            <div key={ex.id} className="tactile-card" data-testid={`exercise-card-${ex.id}`}>
+            <button
+              key={ex.id}
+              type="button"
+              onClick={() => setSelected(ex)}
+              className="tactile-card text-left hover:border-primary/40 transition-colors cursor-pointer"
+              data-testid={`exercise-card-${ex.id}`}
+            >
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="font-heading font-semibold">{ex.name}</div>
@@ -98,13 +124,70 @@ export default function ExercisesLibrary() {
                   ))}
                 </div>
               )}
-            </div>
+            </button>
           ))}
         </div>
       )}
 
+      <ExerciseSheet exercise={selected} onClose={() => setSelected(null)} />
       <AddExerciseDialog open={open} onClose={() => setOpen(false)} onCreated={load} />
     </div>
+  );
+}
+
+function ExerciseSheet({ exercise, onClose }) {
+  return (
+    <Sheet open={!!exercise} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent className="overflow-y-auto sm:max-w-lg" data-testid="exercise-detail-sheet">
+        {exercise && (
+          <>
+            <SheetHeader>
+              <SheetTitle className="font-heading text-2xl">{exercise.name}</SheetTitle>
+              <SheetDescription className="flex items-center gap-2 flex-wrap">
+                <Badge variant="outline" className="rounded-full">{exercise.category.replace("_", " ")}</Badge>
+                <Badge variant="outline" className="rounded-full">{exercise.difficulty}</Badge>
+                {exercise.is_system && <Badge variant="secondary" className="rounded-full">System library</Badge>}
+                <span className="text-xs">~{exercise.duration_seconds}s</span>
+              </SheetDescription>
+            </SheetHeader>
+
+            <div className="mt-6 space-y-6">
+              {exercise.muscle_groups?.length > 0 && (
+                <div>
+                  <div className="label-eyebrow mb-2">Target muscles</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {exercise.muscle_groups.map((m) => (
+                      <span key={m} className="text-xs uppercase tracking-wider px-2.5 py-1 rounded-full bg-muted text-muted-foreground">{m}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <div className="label-eyebrow mb-2 flex items-center gap-1"><ListChecks className="size-3" /> Instructions</div>
+                <p className="text-sm leading-relaxed">{exercise.instructions}</p>
+              </div>
+
+              {exercise.safety_notes && (
+                <div>
+                  <div className="label-eyebrow mb-2 flex items-center gap-1"><ShieldAlert className="size-3" /> Safety notes</div>
+                  <p className="text-sm leading-relaxed text-muted-foreground">{exercise.safety_notes}</p>
+                </div>
+              )}
+
+              {exercise.demo_video_url && (
+                <div>
+                  <div className="label-eyebrow mb-2">Demo</div>
+                  <a href={exercise.demo_video_url} target="_blank" rel="noreferrer" className="text-sm text-primary hover:underline">
+                    Open demo video →
+                  </a>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -127,7 +210,7 @@ function AddExerciseDialog({ open, onClose, onCreated }) {
       onCreated();
       onClose();
       setForm({ name: "", category: "CORE", difficulty: "BEGINNER", instructions: "", safety_notes: "", muscle_groups: "" });
-    } catch (err) {
+    } catch {
       toast.error("Failed to add exercise");
     }
     setBusy(false);
@@ -150,9 +233,7 @@ function AddExerciseDialog({ open, onClose, onCreated }) {
               <Select value={form.category} onValueChange={set("category")}>
                 <SelectTrigger data-testid="add-exercise-category-trigger"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {["MAT_PILATES", "REFORMER", "CORE", "FLEXIBILITY", "BALANCE", "STRENGTH", "CARDIO", "WARMUP", "COOLDOWN"].map((c) => (
-                    <SelectItem key={c} value={c}>{c.replace("_", " ")}</SelectItem>
-                  ))}
+                  {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c.replace("_", " ")}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -161,7 +242,7 @@ function AddExerciseDialog({ open, onClose, onCreated }) {
               <Select value={form.difficulty} onValueChange={set("difficulty")}>
                 <SelectTrigger data-testid="add-exercise-difficulty-trigger"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {["BEGINNER", "INTERMEDIATE", "ADVANCED"].map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                  {DIFFICULTY.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

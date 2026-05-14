@@ -1,15 +1,25 @@
+/**
+ * Class detail — live polling pipeline + editable title + delete.
+ */
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
   ArrowLeft, RefreshCw, Check, Download, Wand2, CheckCircle2, Circle, Loader2,
+  Pencil, Trash2,
 } from "lucide-react";
 import { statusLabel, statusTone, STEP_ORDER, STEP_LABELS } from "@/lib/status";
 
@@ -17,10 +27,14 @@ const FINAL_STATES = ["RENDERED", "FAILED"];
 
 export default function ClassDetail() {
   const { id } = useParams();
+  const nav = useNavigate();
   const [cls, setCls] = useState(null);
   const [regenIdx, setRegenIdx] = useState(null);
   const [instruction, setInstruction] = useState("");
   const [regenLoading, setRegenLoading] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ title: "", music_style: "" });
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -34,15 +48,11 @@ export default function ClassDetail() {
           timer = setTimeout(tick, 2500);
         }
       } catch {
-        // network blip — try again later if still mounted
         if (alive) timer = setTimeout(tick, 4000);
       }
     };
     tick();
-    return () => {
-      alive = false;
-      if (timer) clearTimeout(timer);
-    };
+    return () => { alive = false; if (timer) clearTimeout(timer); };
   }, [id]);
 
   if (!cls) return <div className="text-muted-foreground">Loading…</div>;
@@ -55,9 +65,7 @@ export default function ClassDetail() {
       const { data } = await api.post(`/classes/${id}/approve`);
       setCls(data);
       toast.success("Class approved");
-    } catch {
-      toast.error("Approval failed");
-    }
+    } catch { toast.error("Approval failed"); }
   };
 
   const regenerateAll = async () => {
@@ -65,9 +73,7 @@ export default function ClassDetail() {
       const { data } = await api.post(`/classes/${id}/regenerate`);
       setCls(data);
       toast.success("Regeneration started");
-    } catch {
-      toast.error("Regenerate failed");
-    }
+    } catch { toast.error("Regenerate failed"); }
   };
 
   const submitRegen = async () => {
@@ -81,10 +87,30 @@ export default function ClassDetail() {
       setRegenIdx(null);
       setInstruction("");
       toast.success("Segment regenerated");
-    } catch {
-      toast.error("Failed to regenerate segment");
-    }
+    } catch { toast.error("Failed to regenerate segment"); }
     setRegenLoading(false);
+  };
+
+  const openEdit = () => {
+    setEditForm({ title: cls.title, music_style: cls.music_style });
+    setEditOpen(true);
+  };
+
+  const submitEdit = async () => {
+    try {
+      const { data } = await api.patch(`/classes/${id}`, editForm);
+      setCls(data);
+      setEditOpen(false);
+      toast.success("Class updated");
+    } catch { toast.error("Update failed"); }
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await api.delete(`/classes/${id}`);
+      toast.success("Class deleted");
+      nav("/app/classes");
+    } catch { toast.error("Delete failed"); }
   };
 
   return (
@@ -110,6 +136,9 @@ export default function ClassDetail() {
           <Badge variant={statusTone(cls.status)} className="rounded-full text-sm py-1.5 px-3" data-testid="class-detail-status">
             {statusLabel(cls.status)} · {cls.progress_percent}%
           </Badge>
+          <Button variant="outline" size="sm" className="rounded-full" onClick={openEdit} data-testid="class-detail-edit-button">
+            <Pencil className="size-4 mr-1" /> Edit
+          </Button>
           <Button variant="outline" size="sm" className="rounded-full" onClick={regenerateAll} data-testid="class-detail-regenerate-button">
             <RefreshCw className="size-4 mr-1" /> Regenerate all
           </Button>
@@ -133,10 +162,18 @@ export default function ClassDetail() {
               </Button>
             </>
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="rounded-full text-destructive hover:text-destructive"
+            onClick={() => setDeleteOpen(true)}
+            data-testid="class-detail-delete-button"
+          >
+            <Trash2 className="size-4 mr-1" /> Delete
+          </Button>
         </div>
       </header>
 
-      {/* Pipeline */}
       <section className="tactile-card">
         <div className="label-eyebrow mb-4">Generation pipeline</div>
         <ol className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -146,7 +183,6 @@ export default function ClassDetail() {
             const Icon =
               state === "DONE" ? CheckCircle2
               : state === "RUNNING" ? Loader2
-              : state === "FAILED" ? Circle
               : Circle;
             return (
               <li
@@ -171,7 +207,6 @@ export default function ClassDetail() {
         </ol>
       </section>
 
-      {/* Script segments */}
       <section className="space-y-4">
         <div className="flex items-end justify-between">
           <h2 className="text-xl font-heading font-bold">Script segments</h2>
@@ -237,7 +272,7 @@ export default function ClassDetail() {
         )}
       </section>
 
-      {/* regenerate dialog */}
+      {/* segment regenerate dialog */}
       <Dialog open={regenIdx !== null} onOpenChange={(o) => !o && setRegenIdx(null)}>
         <DialogContent data-testid="regenerate-dialog">
           <DialogHeader>
@@ -261,12 +296,48 @@ export default function ClassDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* edit dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent data-testid="class-edit-dialog">
+          <DialogHeader>
+            <DialogTitle>Edit class</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Title</Label>
+              <Input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} data-testid="class-edit-title-input" />
+            </div>
+            <div className="space-y-2">
+              <Label>Music style</Label>
+              <Input value={editForm.music_style} onChange={(e) => setEditForm({ ...editForm, music_style: e.target.value })} data-testid="class-edit-music-input" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button onClick={submitEdit} data-testid="class-edit-save-button">Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* delete confirm */}
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent data-testid="class-detail-delete-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this class?</AlertDialogTitle>
+            <AlertDialogDescription>"{cls.title}" will be permanently removed.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} data-testid="class-detail-delete-confirm-button">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
 function Dot() { return <span className="inline-block size-1 rounded-full bg-border" />; }
-
 function Block({ label, children }) {
   return (
     <div>

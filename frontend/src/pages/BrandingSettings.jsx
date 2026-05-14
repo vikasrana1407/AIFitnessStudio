@@ -1,3 +1,7 @@
+/**
+ * Branding settings — saves studio profile. Live-applies brand color to the entire app
+ * via CSS variable update (no reload needed).
+ */
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -8,6 +12,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { applyBrandColor } from "@/lib/theme";
 
 const VOICES = [
   ["warm_female", "Warm Female"],
@@ -21,9 +26,10 @@ const AVATARS = [
   ["instructor_warm", "Studio Instructor (Warm)"],
   ["instructor_athletic", "Athletic Instructor"],
 ];
+const COLOR_PRESETS = ["#264D3B", "#1E3A8A", "#7C2D12", "#1F2937", "#4A044E", "#0F766E"];
 
 export default function BrandingSettings() {
-  const { refreshUser } = useAuth();
+  const { refreshUser, applyTheme, user } = useAuth();
   const [studio, setStudio] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -33,7 +39,11 @@ export default function BrandingSettings() {
 
   if (!studio) return <div className="text-muted-foreground">Loading…</div>;
 
-  const set = (k, v) => setStudio({ ...studio, [k]: v });
+  const set = (k, v) => {
+    const next = { ...studio, [k]: v };
+    setStudio(next);
+    if (k === "brand_color") applyBrandColor(v); // live preview
+  };
 
   const save = async (e) => {
     e.preventDefault();
@@ -42,7 +52,8 @@ export default function BrandingSettings() {
       const { data } = await api.patch("/studios/current", studio);
       setStudio(data);
       await refreshUser();
-      toast.success("Studio settings saved");
+      applyTheme({ ...user, studio: data });
+      toast.success("Studio settings saved · theme applied");
     } catch {
       toast.error("Could not save settings");
     }
@@ -55,7 +66,7 @@ export default function BrandingSettings() {
         <div className="label-eyebrow mb-2">Branding & defaults</div>
         <h1 className="text-3xl font-heading font-bold tracking-tight">Studio settings</h1>
         <p className="mt-2 text-muted-foreground text-sm">
-          These defaults flow into every class generated for {studio.name}.
+          These defaults flow into every class generated for {studio.name}. Brand color updates the entire app in real time.
         </p>
       </header>
 
@@ -71,9 +82,30 @@ export default function BrandingSettings() {
             <Input value={studio.logo_url} onChange={(e) => set("logo_url", e.target.value)} data-testid="branding-logo-input" />
           </Field>
           <Field label="Brand color (hex)">
-            <div className="flex items-center gap-3">
-              <Input value={studio.brand_color} onChange={(e) => set("brand_color", e.target.value)} data-testid="branding-color-input" />
-              <div className="size-9 rounded-md border border-border" style={{ background: studio.brand_color }} />
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <Input value={studio.brand_color} onChange={(e) => set("brand_color", e.target.value)} data-testid="branding-color-input" />
+                <input
+                  type="color"
+                  value={studio.brand_color}
+                  onChange={(e) => set("brand_color", e.target.value)}
+                  className="h-9 w-12 rounded-md border border-border cursor-pointer"
+                  data-testid="branding-color-picker"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {COLOR_PRESETS.map((c) => (
+                  <button
+                    type="button"
+                    key={c}
+                    onClick={() => set("brand_color", c)}
+                    className="size-7 rounded-full border-2 border-border hover:scale-110 transition-transform"
+                    style={{ background: c }}
+                    aria-label={`Use preset ${c}`}
+                    data-testid={`branding-preset-${c.slice(1)}`}
+                  />
+                ))}
+              </div>
             </div>
           </Field>
           <Field label="Voice preference">
@@ -94,10 +126,11 @@ export default function BrandingSettings() {
           </Field>
         </div>
 
-        <div className="pt-2">
+        <div className="pt-2 flex items-center gap-3">
           <Button type="submit" disabled={saving} className="rounded-full" data-testid="branding-save-button">
             {saving ? "Saving…" : "Save settings"}
           </Button>
+          <div className="size-9 rounded-md border border-border" style={{ background: studio.brand_color }} aria-label="Brand color preview" />
         </div>
       </form>
     </div>

@@ -1,16 +1,33 @@
+/**
+ * Super Admin overview — KPIs, clickable studios table, users table.
+ * Click a studio row → navigate to /app/admin/studios/:id (full studio dossier).
+ */
 import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import api from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { ShieldCheck, Building2, Users, Sparkles, Film, Library, ArrowRight } from "lucide-react";
+
+const KPI_DEFS = [
+  ["Studios", "total_studios", Building2],
+  ["Users", "total_users", Users],
+  ["Classes", "total_classes", Sparkles],
+  ["Rendered", "classes_rendered", Film],
+  ["In progress", "classes_in_progress", ShieldCheck],
+  ["Exercises", "total_exercises", Library],
+];
 
 export default function SuperAdmin() {
   const { user } = useAuth();
+  const nav = useNavigate();
   const [metrics, setMetrics] = useState(null);
   const [studios, setStudios] = useState([]);
   const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user?.role !== "SUPER_ADMIN") return;
@@ -22,6 +39,7 @@ export default function SuperAdmin() {
       setMetrics(m.data);
       setStudios(s.data || []);
       setUsers(u.data || []);
+      setLoading(false);
     });
   }, [user]);
 
@@ -33,6 +51,7 @@ export default function SuperAdmin() {
       </div>
     );
   }
+  if (loading) return <div className="text-muted-foreground">Loading…</div>;
 
   return (
     <div className="space-y-10">
@@ -42,17 +61,14 @@ export default function SuperAdmin() {
         <p className="mt-2 text-muted-foreground text-sm">Manage all studios, users and platform health.</p>
       </header>
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        {metrics && [
-          ["Studios", metrics.total_studios],
-          ["Users", metrics.total_users],
-          ["Classes", metrics.total_classes],
-          ["Rendered", metrics.classes_rendered],
-          ["In progress", metrics.classes_in_progress],
-        ].map(([k, v]) => (
-          <div key={k} className="tactile-card" data-testid={`admin-kpi-${k.toLowerCase().replace(/\s/g, '-')}`}>
-            <div className="label-eyebrow">{k}</div>
-            <div className="mt-3 text-3xl font-heading font-bold">{v}</div>
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+        {KPI_DEFS.map(([label, key, Icon]) => (
+          <div key={key} className="tactile-card" data-testid={`admin-kpi-${key}`}>
+            <div className="flex items-center justify-between">
+              <div className="label-eyebrow">{label}</div>
+              <Icon className="size-4 text-muted-foreground" />
+            </div>
+            <div className="mt-3 text-3xl font-heading font-bold">{metrics?.[key] ?? 0}</div>
           </div>
         ))}
       </div>
@@ -68,23 +84,30 @@ export default function SuperAdmin() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Slug</TableHead>
-                <TableHead>Members</TableHead>
-                <TableHead>Classes</TableHead>
+                <TableHead className="text-right">Members</TableHead>
+                <TableHead className="text-right">Classes</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {studios.map((s) => (
-                <TableRow key={s.id} data-testid={`admin-studio-row-${s.id}`}>
+                <TableRow
+                  key={s.id}
+                  className="cursor-pointer hover:bg-muted/60"
+                  onClick={() => nav(`/app/admin/studios/${s.id}`)}
+                  data-testid={`admin-studio-row-${s.id}`}
+                >
                   <TableCell className="font-medium">{s.name}</TableCell>
                   <TableCell className="text-muted-foreground">{s.slug}</TableCell>
-                  <TableCell>{s.member_count}</TableCell>
-                  <TableCell>{s.class_count}</TableCell>
+                  <TableCell className="text-right">{s.member_count}</TableCell>
+                  <TableCell className="text-right">{s.class_count}</TableCell>
                   <TableCell>
                     <Badge variant={s.is_active ? "outline" : "secondary"} className="rounded-full">
                       {s.is_active ? "Active" : "Paused"}
                     </Badge>
                   </TableCell>
+                  <TableCell><ArrowRight className="size-4 text-muted-foreground" /></TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -115,7 +138,13 @@ export default function SuperAdmin() {
                   <TableCell>
                     <Badge variant="secondary" className="rounded-full text-xs">{u.role}</Badge>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{u.studio?.name || "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {u.studio ? (
+                      <Link to={`/app/admin/studios/${u.studio.id}`} className="hover:text-primary hover:underline">
+                        {u.studio.name}
+                      </Link>
+                    ) : "—"}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

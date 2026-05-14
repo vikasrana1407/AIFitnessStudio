@@ -1,11 +1,21 @@
+/**
+ * Auth context — JWT access/refresh stored in localStorage.
+ * Also applies the active studio's brand color to CSS variables on login.
+ */
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import api from "./api";
+import { applyBrandColor, resetBrandColor } from "./theme";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const applyTheme = useCallback((u) => {
+    if (u?.studio?.brand_color) applyBrandColor(u.studio.brand_color);
+    else resetBrandColor();
+  }, []);
 
   const fetchMe = useCallback(async () => {
     const token = localStorage.getItem("fs_access");
@@ -16,12 +26,13 @@ export function AuthProvider({ children }) {
     try {
       const { data } = await api.get("/auth/me");
       setUser(data);
+      applyTheme(data);
     } catch {
       localStorage.removeItem("fs_access");
       localStorage.removeItem("fs_refresh");
     }
     setLoading(false);
-  }, []);
+  }, [applyTheme]);
 
   useEffect(() => { fetchMe(); }, [fetchMe]);
 
@@ -30,6 +41,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem("fs_access", data.access);
     localStorage.setItem("fs_refresh", data.refresh);
     setUser(data.user);
+    applyTheme(data.user);
     return data.user;
   };
 
@@ -38,6 +50,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem("fs_access", data.access);
     localStorage.setItem("fs_refresh", data.refresh);
     setUser(data.user);
+    applyTheme(data.user);
     return data.user;
   };
 
@@ -45,12 +58,11 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("fs_access");
     localStorage.removeItem("fs_refresh");
     setUser(null);
+    resetBrandColor();
   };
 
-  const refreshUser = fetchMe;
-
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser: fetchMe, applyTheme }}>
       {children}
     </AuthContext.Provider>
   );

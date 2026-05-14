@@ -1,29 +1,43 @@
+/**
+ * Dashboard home — different content for Studio Owners vs Super Admins.
+ * KPI cards link to dedicated pages.
+ */
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import api from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, ArrowRight, Film, Library, Mic2 } from "lucide-react";
+import {
+  Sparkles, ArrowRight, Film, Library, Mic2, Building2, Users, ShieldCheck,
+} from "lucide-react";
 import { statusLabel, statusTone } from "@/lib/status";
 
 export default function DashboardHome() {
   const { user } = useAuth();
+  const isAdmin = user?.role === "SUPER_ADMIN";
+  const nav = useNavigate();
+
+  // Redirect super admin to admin overview as their primary landing.
+  useEffect(() => {
+    if (isAdmin) nav("/app/admin", { replace: true });
+  }, [isAdmin, nav]);
+
   const [classes, setClasses] = useState([]);
   const [exCount, setExCount] = useState(0);
 
   useEffect(() => {
-    api.get("/classes/").then((r) => setClasses(r.data || []));
-    api.get("/exercises/").then((r) => setExCount((r.data || []).length));
-  }, []);
+    if (isAdmin) return;
+    api.get("/classes/").then((r) => setClasses(r.data || [])).catch(() => {});
+    api.get("/exercises/").then((r) => setExCount((r.data || []).length)).catch(() => {});
+  }, [isAdmin]);
+
+  if (isAdmin) return null;
 
   const rendered = classes.filter((c) => c.status === "RENDERED").length;
   const inProgress = classes.filter(
     (c) => !["RENDERED", "FAILED", "DRAFT"].includes(c.status)
   ).length;
-  const totalMinutes = classes
-    .filter((c) => c.status === "RENDERED")
-    .reduce((s, c) => s + (c.duration_minutes || 0), 0);
 
   return (
     <div className="space-y-10">
@@ -45,10 +59,10 @@ export default function DashboardHome() {
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Kpi label="Classes generated" value={classes.length} icon={Sparkles} testid="kpi-classes" />
-        <Kpi label="Rendered videos" value={rendered} icon={Film} testid="kpi-rendered" />
-        <Kpi label="In progress" value={inProgress} icon={Mic2} testid="kpi-in-progress" />
-        <Kpi label="Exercises available" value={exCount} icon={Library} testid="kpi-exercises" />
+        <KpiLink to="/app/classes" label="Classes generated" value={classes.length} icon={Sparkles} testid="kpi-classes" />
+        <KpiLink to="/app/classes?tab=ready" label="Rendered videos" value={rendered} icon={Film} testid="kpi-rendered" />
+        <KpiLink to="/app/classes?tab=in-progress" label="In progress" value={inProgress} icon={Mic2} testid="kpi-in-progress" />
+        <KpiLink to="/app/exercises" label="Exercises available" value={exCount} icon={Library} testid="kpi-exercises" />
       </div>
 
       <section>
@@ -59,7 +73,15 @@ export default function DashboardHome() {
           </Link>
         </div>
         {classes.length === 0 ? (
-          <EmptyState />
+          <div className="tactile-card text-center py-14">
+            <div className="text-lg font-heading font-semibold">No classes yet</div>
+            <p className="text-sm text-muted-foreground mt-2 max-w-sm mx-auto">
+              Generate your first AI-powered class — script, voice, avatar and final video — in minutes.
+            </p>
+            <Button asChild className="mt-6 rounded-full" data-testid="empty-create-class-button">
+              <Link to="/app/classes/new"><Sparkles className="size-4 mr-2" />Create your first class</Link>
+            </Button>
+          </div>
         ) : (
           <div className="space-y-3">
             {classes.slice(0, 6).map((c) => (
@@ -88,28 +110,17 @@ export default function DashboardHome() {
   );
 }
 
-function Kpi({ label, value, icon: Icon, testid }) {
+function KpiLink({ to, label, value, icon: Icon, testid }) {
   return (
-    <div className="tactile-card" data-testid={testid}>
+    <Link to={to} className="tactile-card hover:border-primary/40 block group" data-testid={testid}>
       <div className="flex items-center justify-between">
         <div className="label-eyebrow">{label}</div>
-        <Icon className="size-4 text-muted-foreground" />
+        <Icon className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
       </div>
       <div className="mt-4 text-3xl font-heading font-bold">{value}</div>
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="tactile-card text-center py-14">
-      <div className="text-lg font-heading font-semibold">No classes yet</div>
-      <p className="text-sm text-muted-foreground mt-2 max-w-sm mx-auto">
-        Generate your first AI-powered class — script, voice, avatar and final video — in minutes.
-      </p>
-      <Button asChild className="mt-6 rounded-full" data-testid="empty-create-class-button">
-        <Link to="/app/classes/new"><Sparkles className="size-4 mr-2" />Create your first class</Link>
-      </Button>
-    </div>
+      <div className="mt-3 text-xs text-muted-foreground inline-flex items-center gap-1 group-hover:text-primary">
+        View <ArrowRight className="size-3" />
+      </div>
+    </Link>
   );
 }
