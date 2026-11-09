@@ -1,96 +1,82 @@
 # FitStudio AI
 
-Multi-tenant SaaS platform that auto-generates guided fitness class videos from a text brief —
-AI script + voiceover + avatar instructor + branded MP4 — built for boutique pilates/fitness studios.
+A multi-tenant fitness-studio platform for turning a class brief into a guided class workflow: AI-assisted script generation, class management, studio branding, and generation-job tracking. Voice, avatar, and final video-render steps are currently mocked; see [What is implemented](#implemented-and-mocked) before expecting an MP4 pipeline.
 
-## Stack
+## Project structure
 
-| Layer    | Tech |
-|----------|------|
-| Backend  | **Django 5 + DRF**, JWT auth, SQLite (Postgres-ready) |
-| Frontend | **React 19** + Tailwind + Shadcn/UI |
-| AI       | Claude Sonnet 4.5 via `emergentintegrations` (Emergent Universal Key) |
-| Phase 2  | ElevenLabs (voice) · HeyGen/Tavus/Synthesia/D-ID (avatar) · FFmpeg/Remotion (render) |
-
-## Repository layout
-
-```
-app/
-├── backend/        # Django project (see backend/README.md)
-├── frontend/       # React app
-├── memory/         # PRD + test credentials
+```text
+.
+├── backend/       # Django/DRF API and ASGI entry point
+├── frontend/      # React application
+├── memory/        # project notes
+├── tests/         # project test assets
 └── README.md
 ```
 
-## Quick start (local, no Emergent)
+## Stack
 
-### 1. Backend
+- Backend: Django, Django REST Framework, JWT authentication, SQLite by default
+- Frontend: React 19, Tailwind CSS, and Radix-based UI components
+- AI script generation: `emergentintegrations` (provider configuration required)
+- Planned integrations: voice generation, avatar rendering, and video assembly
+
+## Local development
+
+### Backend
+
+The backend imports Django and Django REST Framework, but the current `backend/requirements.txt` does not list those packages. Fix/synchronize the dependency manifest before following the backend install steps; otherwise a fresh environment will not start. Do not commit local `.env` files or API keys.
+
+After the dependency manifest is corrected:
 
 ```bash
 cd backend
 python -m venv .venv
-source .venv/bin/activate
+# Windows PowerShell: .\.venv\Scripts\Activate.ps1
+# Linux/macOS: source .venv/bin/activate
 pip install -r requirements.txt
-pip install emergentintegrations --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/
 
-cp .env.example .env                # fill EMERGENT_LLM_KEY at minimum
-
+# Configure required environment values locally, then:
 python manage.py migrate
 python manage.py seed_data
-
-uvicorn server:app --host 0.0.0.0 --port 8001 --reload
+uvicorn server:app --host 127.0.0.1 --port 8001 --reload
 ```
 
-### 2. Frontend
+### Frontend
+
+In another terminal:
 
 ```bash
 cd frontend
-echo 'REACT_APP_BACKEND_URL=http://localhost:8001' > .env
 yarn install
+```
+
+Set `REACT_APP_BACKEND_URL=http://127.0.0.1:8001` in a local `frontend/.env`, then run:
+
+```bash
 yarn start
 ```
 
-App: `http://localhost:3000`
+Open [http://localhost:3000](http://localhost:3000). The frontend package also defines `yarn build` and `yarn test`.
 
-### Seeded logins
+## Implemented and mocked
 
+The current app includes tenant-aware registration and authentication, class and exercise management, a generation-job tracker, branding/profile settings, and a super-admin dashboard. The script-generation integration is described in the backend code; voice generation, avatar rendering, and final video stitching are explicitly mocked and must not be treated as production integrations.
+
+## Tests
+
+Once the backend dependencies are available, run the Django tests from `backend/`:
+
+```bash
+python manage.py test
 ```
-Super admin     admin@fitstudio.ai / Admin@12345
-Demo owner      owner@lumen.studio / Owner@12345
+
+Frontend test command:
+
+```bash
+cd frontend
+yarn test
 ```
 
-## Features (Phase 1 — current)
+## Security and deployment
 
-1. **Multi-tenant auth** — register creates `Studio` + `Owner` atomically; super-admin role
-2. **AI class generation** — text brief → minute-by-minute script with intro/segments/outro
-   (real LLM call via Emergent Universal Key, deterministic fallback if LLM offline)
-3. **Exercise library** — 25 seeded system exercises + studio-scoped CRUD with detail drawer
-4. **Generation job tracker** — script → voice → avatar → render with per-step status
-5. **Class management** — list/detail, edit title + music, full regenerate, per-segment regenerate
-   with custom instruction, approve, delete, MP4 download
-6. **Tabs in class list** — All / In Progress / Ready, with counts
-7. **Branding settings** — name, tagline, logo URL, brand color (live theme update), voice + avatar prefs
-8. **Avatar Studio** — pick template, pick voice, render sample line (MOCKED)
-9. **Profile settings** — edit name/email + change password (works for owner & super admin)
-10. **Super admin dashboard** — KPIs, clickable studio drill-down, users table
-
-## What's MOCKED
-
-- Voice generation (ElevenLabs)
-- Avatar video render (HeyGen / Synthesia / Tavus / D-ID)
-- Final MP4 stitching (FFmpeg)
-
-Each is a clearly-labeled `MOCKED` block in `backend/classes/pipeline.py` and
-`frontend/src/pages/AvatarStudio.jsx`. Drop in real provider keys + calls to unmock.
-
-## Production deployment
-
-- **Backend**: any ASGI host (Uvicorn, Daphne, Hypercorn). Use Postgres by setting
-  `DB_ENGINE`, `DB_NAME_SQL`, etc. in `backend/.env`. Replace daemon-thread pipeline
-  with Celery once jobs grow past ~30s.
-- **Frontend**: `yarn build` produces a static bundle ready for Nginx / Vercel / Netlify.
-- See `backend/README.md` for full deploy notes.
-
-## Test credentials
-
-See [`memory/test_credentials.md`](memory/test_credentials.md).
+Use development credentials only for local testing, rotate any credentials that may have been exposed, and configure unique production secrets outside the repository. Review the backend's database and job-processing choices before deployment; the current pipeline uses in-process background work and is not a durable job queue.
